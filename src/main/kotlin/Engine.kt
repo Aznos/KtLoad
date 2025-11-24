@@ -15,7 +15,7 @@ data class RequestResult(
     val error: String? = null
 )
 
-suspend fun runLoadTest(url: String, totalRequests: Int, concurrency: Int): List<RequestResult> = coroutineScope {
+suspend fun runLoadTest(request: HttpRequest, totalRequests: Int, concurrency: Int): List<RequestResult> = coroutineScope {
     require(totalRequests > 0)
     require(concurrency > 0)
 
@@ -55,7 +55,7 @@ suspend fun runLoadTest(url: String, totalRequests: Int, concurrency: Int): List
                     break
                 }
 
-                val (status, nanos) = sendRequest(HttpRequest(url=url))
+                val (status, nanos) = sendRequest(request)
                 val ms = nanos / 1_000_000
 
                 val result = if(status != null) {
