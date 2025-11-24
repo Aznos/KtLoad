@@ -3,8 +3,10 @@ package com.maddoxh
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.IOException
 import java.time.Duration
@@ -16,8 +18,27 @@ val client: OkHttpClient = OkHttpClient.Builder()
     .readTimeout(Duration.ofSeconds(10))
     .build()
 
-suspend fun sendRequest(url: String): Pair<Int?, Long> {
-    val request = Request.Builder().url(url).build()
+data class HttpRequest(
+    val method: String = "GET",
+    val url: String,
+    val headers: Map<String, String> = emptyMap(),
+    val body: String? = null
+) {
+    fun toOkHttpRequest(): Request {
+        val builder = Request.Builder().url(url)
+        for((k, v) in headers) builder.header(k, v)
+
+        val requestBody = body?.let { bodyText ->
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            bodyText.toRequestBody(mediaType)
+        }
+
+        return builder.method(method.uppercase(), requestBody).build()
+    }
+}
+
+suspend fun sendRequest(httpRequest: HttpRequest): Pair<Int?, Long> {
+    val request = httpRequest.toOkHttpRequest()
     val start = System.nanoTime()
 
     return suspendCancellableCoroutine { cont ->

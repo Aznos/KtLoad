@@ -55,7 +55,7 @@ suspend fun runLoadTest(url: String, totalRequests: Int, concurrency: Int): List
                     break
                 }
 
-                val (status, nanos) = sendRequest(url)
+                val (status, nanos) = sendRequest(HttpRequest(url=url))
                 val ms = nanos / 1_000_000
 
                 val result = if(status != null) {
