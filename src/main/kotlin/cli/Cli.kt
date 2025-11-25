@@ -10,6 +10,7 @@ import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
 import com.maddoxh.AssertionSpec
 import com.maddoxh.HttpRequest
+import com.maddoxh.computeErrorBreakdown
 import com.maddoxh.computeStats
 import com.maddoxh.runLoadTest
 import com.maddoxh.shutdownClient
@@ -61,9 +62,10 @@ class Cli : CliktCommand() {
             val results = runLoadTest(request, count, concurrency, assertions)
             val durationMs = (System.nanoTime() - startNs) / 1_000_000
             val stats = computeStats(results, durationMs)
+            val errors = computeErrorBreakdown(results, assertions)
 
             println()
-            printSummary(url, count, concurrency, stats)
+            printSummary(url, count, concurrency, stats, errors)
         }
 
         shutdownClient()

@@ -1,5 +1,6 @@
 package com.maddoxh.cli
 
+import com.maddoxh.ErrorBreakdown
 import com.maddoxh.RunStats
 
 private const val CYAN = "\u001B[36m"
@@ -25,7 +26,7 @@ fun renderProgressBar(done: Int, total: Int, width: Int = 30): String {
     return "[$bar]"
 }
 
-fun printSummary(url: String, totalRequests: Int, concurrency: Int, stats: RunStats) {
+fun printSummary(url: String, totalRequests: Int, concurrency: Int, stats: RunStats, errors: ErrorBreakdown) {
     val line = "=".repeat(50)
     val subLine = "-".repeat(50)
 
@@ -44,6 +45,21 @@ fun printSummary(url: String, totalRequests: Int, concurrency: Int, stats: RunSt
     println("${DIM}Results:$RESET")
     println("  ${GREEN}Success      :$RESET ${stats.success}")
     println("  ${RED}Failure      :$RESET ${stats.failure}")
+
+    println()
+    println("${DIM}Errors (breakdown):$RESET")
+    println("  Network failures : ${errors.networkFailures}")
+    println("  Status failures  : ${errors.statusFailures}")
+    println("  Slow (> SLA)     : ${errors.latencyFailures}")
+
+    if(errors.statusCounts.isNotEmpty()) {
+        println()
+        println("${DIM}Status code counts:$RESET")
+        errors.statusCounts.toSortedMap().forEach { (code, count) ->
+            println("  $code : $count")
+        }
+    }
+
     println()
     println("${DIM}Latency (ms):$RESET")
     println("  min        : ${stats.minMs}")

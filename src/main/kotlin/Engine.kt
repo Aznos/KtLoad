@@ -34,14 +34,14 @@ suspend fun runLoadTest(request: HttpRequest, totalRequests: Int, concurrency: I
         while(true) {
             val done = completed.get()
             val elapsedMs = (System.nanoTime() - startNs) / 1_000_000
-            val aps = if(elapsedMs > 0) {
+            val rps = if(elapsedMs > 0) {
                 done.toDouble() / (elapsedMs.toDouble() / 1000.0)
             } else 0.0
 
             val bar = renderProgressBar(done, totalRequests, 30)
             val percent = if(totalRequests > 0) (done * 100 / totalRequests.toDouble()) else 0
 
-            print("\r$bar  $done/$totalRequests (${percent}%)  APS: ${"%.1f".format(aps)}")
+            print("\r$bar  $done/$totalRequests (${percent}%)  RPS: ${"%.1f".format(rps)}")
             System.out.flush()
 
             if(done >= totalRequests) {
