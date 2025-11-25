@@ -26,6 +26,7 @@ suspend fun runLoadTest(request: HttpRequest, totalRequests: Int, concurrency: I
 
     val remaining = AtomicInteger(totalRequests)
     val completed = AtomicInteger(0)
+    val successful = AtomicInteger(0)
     val results = Collections.synchronizedList(mutableListOf<RequestResult>())
 
     val startNs = System.nanoTime()
@@ -33,6 +34,7 @@ suspend fun runLoadTest(request: HttpRequest, totalRequests: Int, concurrency: I
     val progressJob = launch {
         while(true) {
             val done = completed.get()
+            val ok = successful.get()
             val elapsedMs = (System.nanoTime() - startNs) / 1_000_000
             val rps = if(elapsedMs > 0) {
                 done.toDouble() / (elapsedMs.toDouble() / 1000.0)
@@ -40,8 +42,16 @@ suspend fun runLoadTest(request: HttpRequest, totalRequests: Int, concurrency: I
 
             val bar = renderProgressBar(done, totalRequests, 30)
             val percent = if(totalRequests > 0) (done * 100 / totalRequests.toDouble()) else 0
+            val success = if(done > 0) {
+                ok * 100 / done.toDouble()
+            } else 0.0
 
-            print("\r$bar  $done/$totalRequests (${percent}%)  RPS: ${"%.1f".format(rps)}")
+            print(
+                "\r$bar  $done/$totalRequests " +
+                        "(${String.format("%.1f", percent)}%)  " +
+                        "RPS: ${"%.1f".format(rps)}  " +
+                        "OK: ${"%.1f".format(success)}%"
+            )
             System.out.flush()
 
             if(done >= totalRequests) {
@@ -68,6 +78,8 @@ suspend fun runLoadTest(request: HttpRequest, totalRequests: Int, concurrency: I
                 val result = RequestResult(success, status, ms, networkError)
                 results += result
                 completed.incrementAndGet()
+
+                if(success) successful.incrementAndGet()
             }
         }
     }
