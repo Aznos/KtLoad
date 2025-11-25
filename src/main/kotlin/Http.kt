@@ -3,6 +3,7 @@ package com.maddoxh
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.Dispatcher
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -12,7 +13,13 @@ import java.io.IOException
 import java.time.Duration
 import kotlin.coroutines.resume
 
+val dispatcher = Dispatcher().apply {
+    maxRequests = 512
+    maxRequestsPerHost = 512
+}
+
 val client: OkHttpClient = OkHttpClient.Builder()
+    .dispatcher(dispatcher)
     .callTimeout(Duration.ofSeconds(10))
     .connectTimeout(Duration.ofSeconds(5))
     .readTimeout(Duration.ofSeconds(10))
