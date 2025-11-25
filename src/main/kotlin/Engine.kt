@@ -8,6 +8,11 @@ import kotlinx.coroutines.launch
 import java.util.Collections
 import java.util.concurrent.atomic.AtomicInteger
 
+data class AssertionSpec(
+    val expectedStatus: Int? = null,
+    val maxLatencyMs: Long? = null
+)
+
 data class RequestResult(
     val success: Boolean,
     val status: Int?,
@@ -15,7 +20,7 @@ data class RequestResult(
     val error: String? = null
 )
 
-suspend fun runLoadTest(request: HttpRequest, totalRequests: Int, concurrency: Int): List<RequestResult> = coroutineScope {
+suspend fun runLoadTest(request: HttpRequest, totalRequests: Int, concurrency: Int, assertions: AssertionSpec): List<RequestResult> = coroutineScope {
     require(totalRequests > 0)
     require(concurrency > 0)
 
@@ -58,12 +63,9 @@ suspend fun runLoadTest(request: HttpRequest, totalRequests: Int, concurrency: I
                 val (status, nanos) = sendRequest(request)
                 val ms = nanos / 1_000_000
 
-                val result = if(status != null) {
-                    RequestResult(true, status, ms)
-                } else {
-                    RequestResult(false, null, ms, error = "request failed")
-                }
-
+                val networkError = if (status == null) "request failed" else null
+                val success = evaluateSuccess(status, ms, networkError, assertions)
+                val result = RequestResult(success, status, ms, networkError)
                 results += result
                 completed.incrementAndGet()
             }
@@ -72,4 +74,20 @@ suspend fun runLoadTest(request: HttpRequest, totalRequests: Int, concurrency: I
 
     progressJob.join()
     return@coroutineScope results
+}
+
+private fun evaluateSuccess(status: Int?, ms: Long, networkError: String?, assertions: AssertionSpec): Boolean {
+    if(networkError != null || status == null) return false
+
+    val statusOk = assertions.expectedStatus?.let { expected ->
+        status == expected
+    } ?: (status in 200..299)
+    if(!statusOk) return false
+
+    val latencyOk = assertions.maxLatencyMs?.let { max ->
+        ms <= max
+    } ?: true
+    if(!latencyOk) return false
+
+    return true
 }

@@ -7,6 +7,8 @@ import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.prompt
 import com.github.ajalt.clikt.parameters.types.int
+import com.github.ajalt.clikt.parameters.types.long
+import com.maddoxh.AssertionSpec
 import com.maddoxh.HttpRequest
 import com.maddoxh.computeStats
 import com.maddoxh.runLoadTest
@@ -39,15 +41,24 @@ class Cli : CliktCommand() {
     private val body: String? by option("--body")
         .help("Request body as a string")
 
+    private val expectStatus: Int? by option("--expect-status")
+        .int()
+        .help("Expected HTTP status code. If set, overrides the default 2xx success rule")
+
+    private val maxLatencyMs: Long? by option("--max-latency-ms")
+        .long()
+        .help("Maximum latency per request in ms for success")
+
     override fun run() {
         runBlocking {
             val headers = parseHeaders(rawHeaders)
             val request = HttpRequest(method, url, headers, body)
+            val assertions = AssertionSpec(expectStatus, maxLatencyMs)
 
             printHeader(url, count, concurrency)
 
             val startNs = System.nanoTime()
-            val results = runLoadTest(request, count, concurrency)
+            val results = runLoadTest(request, count, concurrency, assertions)
             val durationMs = (System.nanoTime() - startNs) / 1_000_000
             val stats = computeStats(results, durationMs)
 
